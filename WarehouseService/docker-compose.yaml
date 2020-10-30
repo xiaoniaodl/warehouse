@@ -1,0 +1,86 @@
+version: "3"
+
+networks:
+  warehouse:
+
+volumes:
+  warehouse-storage:
+
+services:
+  # 系统指标采集器
+  node-exporter:
+    image: prom/node-exporter
+    volumes:
+      - "/proc:/host/proc:ro"
+      - "/sys:/host/sys:ro"
+      - "/:/rootfs:ro"
+    networks:
+      warehouse:
+        aliases:
+          - node-exporter
+  
+  # 时间序列数据库
+  prometheus:
+    image: prom/prometheus
+    #ports:
+    #  - "9090:9090"
+    volumes:
+      - "./prometheus.yml:/etc/prometheus/prometheus.yml"
+    networks:
+      warehouse:
+        aliases:
+          - prometheus
+
+  # 日志聚合系统
+  loki:
+    image: grafana/loki:master
+    #ports:
+    #  - "3100:3100"
+    volumes:
+      - $PWD/loki-local-config.yaml:/etc/loki/loki-local-config.yaml
+    command: -config.file=/etc/loki/loki-local-config.yaml
+    networks:
+      warehouse:
+        aliases:
+          - loki
+
+  # 日志抓取系统
+  promtail:
+    image: grafana/promtail:v1.3.0
+    volumes:
+      - $PWD:/etc/promtail
+      - warehouse-storage:/var/log
+    command:
+      -config.file=/etc/promtail/promtail-docker-config.yaml
+    networks:
+      warehouse:
+        aliases:
+          - promtail
+
+  # 可视化指标展示工具
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_EXPLORE_ENABLED: "true"
+    networks:
+      warehouse:
+        aliases:
+          - grafana
+
+  # MQTT服务
+  warehouse-service:
+    build: .
+    ports:
+      - "1883:1883"
+      - "3030:3030"
+    environment:
+      GRAFANA_HOST: "grafana:3000"
+      GRAFANA_PASSWORD: "******"
+    volumes:
+      - warehouse-storage:/var/log
+    networks:
+      warehouse:
+        aliases:
+          - warehouse-service

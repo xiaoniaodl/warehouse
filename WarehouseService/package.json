@@ -1,0 +1,20 @@
+{
+  "name": "WarehouseService",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node ./index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1",
+    "log4js": "^6.1.2",
+    "mosca": "^2.8.3",
+    "socket.io": "^2.3.0"
+  },
+  "devDependencies": {},
+  "description": ""
+}

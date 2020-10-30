@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="./css/bootstrap.min.css">
+    <link rel="stylesheet" href="./css/jquery-ui.min.css">
+    <link rel="stylesheet" href="./css/custom.css">
+    <title>仓库环境监测平台</title>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <a class="navbar-brand mr-0 mr-md-2" href="/"><svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"
+                class="d-block" viewBox="0 0 612 612" role="img" focusable="false">
+                <title>Bootstrap</title>
+                <path fill="currentColor"
+                    d="M510 8a94.3 94.3 0 0 1 94 94v408a94.3 94.3 0 0 1-94 94H102a94.3 94.3 0 0 1-94-94V102a94.3 94.3 0 0 1 94-94h408m0-8H102C45.9 0 0 45.9 0 102v408c0 56.1 45.9 102 102 102h408c56.1 0 102-45.9 102-102V102C612 45.9 566.1 0 510 0z">
+                </path>
+                <path fill="currentColor"
+                    d="M196.77 471.5V154.43h124.15c54.27 0 91 31.64 91 79.1 0 33-24.17 63.72-54.71 69.21v1.76c43.07 5.49 70.75 35.82 70.75 78 0 55.81-40 89-107.45 89zm39.55-180.4h63.28c46.8 0 72.29-18.68 72.29-53 0-31.42-21.53-48.78-60-48.78h-75.57zm78.22 145.46c47.68 0 72.73-19.34 72.73-56s-25.93-55.37-76.46-55.37h-74.49v111.4z">
+                </path>
+            </svg></a>
+        <a class="navbar-brand" href="#">仓库环境监测平台</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item active">
+                    <a class="nav-link" href="#">主页</a>
+                </li>
+                <li class="nav-item">
+                    <a id="grafanaLink" class="nav-link" href="#" target="_blank">Grafana</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="about.html">关于</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div id="loading" class="justify-content-start">
+        <div class="card" style="margin: 10px;">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="spinner-border" role="status" aria-hidden="true"></div>
+                    <strong>&emsp;正在加载...</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="app" style="visibility: collapse;">
+        <div class="card" style="margin: 10px;">
+            <div class="card-header">设备状态</div>
+            <div class="card-body">
+                <ul class="list-group list-group-horizontal">
+                    <li v-for="data in warehouseData" class="list-group-item">
+                        <ul class="list-group list-group-horizontal">
+                            <li class="list-group-item text-white " :class="data.online ? 'bg-success' : 'bg-danger'">#
+                                {{ data.index + 1 }}</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div v-for="data in warehouseData" v-show="data.online" class="card" style="margin: 10px;">
+            <div class="card-header">{{ data.name }}</div>
+            <div class="card-body">
+                <button type="button" class="btn btn-outline-primary"
+                    :class="data.alertState.temp?'bg-danger text-white':''">温度：<span>{{ data.temp }}</span></button>
+                <button type="button" class="btn btn-outline-secondary"
+                    :class="data.alertState.hum?'bg-danger text-white':''">湿度：<span>{{ data.hum }}</span>
+                    %RH</button>
+                <button type="button" class="btn btn-outline-success"
+                    :class="data.alertState.mq135?'bg-danger text-white':''">空气质量：<span>{{ data.mq135 }}</span></button>
+            </div>
+        </div>
+
+        <div class="accordion" id="criticalValue" style="margin: 10px;">
+            <div class="card">
+                <div class="card-header">传感器报警阈值</div>
+                <div id="criticalValuePanel" class="collapse show" aria-labelledby="headingOne"
+                    data-parent="#criticalValue">
+                    <div class="card-body justify-content-start">
+                        <form>
+                            <div class="form-group">
+                                <label>温度：<input type="text" id="range-text-temp" readonly
+                                        style="border:0; font-weight:bold;"></label>
+                                <div id="slider-range-temp"></div>
+                            </div>
+                            <div class="form-group">
+                                <label>湿度：<input type="text" id="range-text-hum" readonly
+                                        style="border:0; font-weight:bold;"></label>
+                                <div id="slider-range-hum"></div>
+                            </div>
+                            <div class="form-group">
+                                <label>空气质量：<input type="text" id="range-text-mq135" readonly
+                                        style="border:0; font-weight:bold;"></label>
+                                <div id="slider-range-mq135"></div>
+                            </div>
+                            <div v-show="isUpdateCriticalValue" class="alert alert-primary" role="alert">
+                                保存成功
+                            </div>
+                            <div class="row justify-content-center">
+                                <button type="button" class="btn btn-primary" v-on:click="updateCriticalValue"
+                                    style="margin-right: 15px;">保存</button>
+                                <button type="button" class="btn btn-secondary" v-on:click="resetSliders">重置</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="./js/jquery.js"></script>
+    <script src="./js/popper.min.js"></script>
+    <script src="./js/bootstrap.min.js"></script>
+    <script src="./js/jquery-ui.min.js"></script>
+    <script src="./js/vue.js"></script>
+    <script src="./js/socket.io.js"></script>
+
+    <script>
+        document.getElementById("grafanaLink").setAttribute("href","http://"+window.location.hostname+":3000");
+
+        var app = new Vue({
+            el: '#app',
+            data: {
+                first: true,
+                socket: null,
+                isUpdateCriticalValue: false,
+                criticalValue: {
+                    temp: [0, 40],
+                    hum: [5, 50],
+                    mq135: [0, 400]
+                },
+                warehouseData: [
+                    {
+                        index: 0,
+                        id: '',
+                        name: '一号仓库',
+                        mac: '',
+                        online: false,
+                        update_time: null,
+                        hum: 0,
+                        temp: 0,
+                        mq135: 0,
+                        alertState: {
+                            temp: false,
+                            hum: false,
+                            mq135: false
+                        }
+                    },
+                    {
+                        index: 1,
+                        id: '',
+                        name: '二号仓库',
+                        mac: '',
+                        online: false,
+                        update_time: null,
+                        hum: 0,
+                        temp: 0,
+                        mq135: 0,
+                        alertState: {
+                            temp: false,
+                            hum: false,
+                            mq135: false
+                        }
+                    },
+                    {
+                        index: 2,
+                        id: '',
+                        name: '三号仓库',
+                        mac: '',
+                        online: false,
+                        update_time: null,
+                        hum: 0,
+                        temp: 0,
+                        mq135: 0,
+                        alertState: {
+                            temp: false,
+                            hum: false,
+                            mq135: false
+                        }
+                    },
+                    {
+                        index: 3,
+                        id: '',
+                        name: '四号仓库',
+                        mac: '',
+                        online: false,
+                        update_time: null,
+                        hum: 0,
+                        temp: 0,
+                        mq135: 0,
+                        alertState: {
+                            temp: false,
+                            hum: false,
+                            mq135: false
+                        }
+                    },
+                ]
+            },
+            mounted: function () {
+                document.getElementById("loading").innerHTML = "";
+                document.getElementById("app").style.visibility = "";
+            },
+            methods: {
+                updateCriticalValue: function () {
+                    if (this.$data.socket == null) return;
+                    this.$data.isUpdateCriticalValue = false;
+                    var postData = {
+                        temp: $("#slider-range-temp").slider("option", "values"),
+                        hum: $("#slider-range-hum").slider("option", "values"),
+                        mq135: $("#slider-range-mq135").slider("option", "values"),
+                    };
+                    this.$data.socket.emit('UpdateCriticalValue', postData);
+                },
+                resetSliders: function () {
+                    if (!this.$data.first) {
+                        $("#slider-range-temp").slider("destroy");
+                        $("#slider-range-hum").slider("destroy");
+                        $("#slider-range-mq135").slider("destroy");
+                    }
+                    this.$data.first = false;
+                    $("#slider-range-temp").slider({
+                        range: true,
+                        min: 0,
+                        max: 50,
+                        values: this.$data.criticalValue.temp,
+                        slide: function (event, ui) {
+                            $("#range-text-temp").val(`${$("#slider-range-temp").slider("values", 0)} ℃ - ${$("#slider-range-temp").slider("values", 1)} ℃`);
+                        }
+                    });
+                    $("#slider-range-hum").slider({
+                        range: true,
+                        min: 0,
+                        max: 90,
+                        values: this.$data.criticalValue.hum,
+                        slide: function (event, ui) {
+                            $("#range-text-hum").val(`${$("#slider-range-hum").slider("values", 0)} %RH - ${$("#slider-range-hum").slider("values", 1)} %RH`);
+                        }
+                    });
+                    $("#slider-range-mq135").slider({
+                        range: true,
+                        min: 0,
+                        max: 800,
+                        values: this.$data.criticalValue.mq135,
+                        slide: function (event, ui) {
+                            $("#range-text-mq135").val(`${$("#slider-range-mq135").slider("values", 0)} - ${$("#slider-range-mq135").slider("values", 1)}`);
+                        }
+                    });
+                    $("#range-text-temp").val(`${$("#slider-range-temp").slider("values", 0)} ℃ - ${$("#slider-range-temp").slider("values", 1)} ℃`);
+                    $("#range-text-hum").val(`${$("#slider-range-hum").slider("values", 0)} %RH - ${$("#slider-range-hum").slider("values", 1)} %RH`);
+                    $("#range-text-mq135").val(`${$("#slider-range-mq135").slider("values", 0)} - ${$("#slider-range-mq135").slider("values", 1)}`);
+                }
+            }
+        })
+
+        $(function () {
+            var socket = io();
+            app.$data.socket = socket;
+            socket.on('CriticalValue', (msg) => {
+                if (msg['msg'] != undefined) {
+                    app.$data.isUpdateCriticalValue = true;
+                    setTimeout(() => app.$data.isUpdateCriticalValue = false, 3000);
+                } else {
+                    app.$data.criticalValue['temp'] = msg['temp'];
+                    app.$data.criticalValue['hum'] = msg['hum'];
+                    app.$data.criticalValue['mq135'] = msg['mq135'];
+                    app.resetSliders();
+                }
+            });
+            socket.on('WarehouseData', (data) => {
+                for (var i = 0; i < data.length; i++) {
+                    for (var key in data[i]) {
+                        app.$data.warehouseData[i][key] = data[i][key];
+                    }
+                    if (app.$data.warehouseData[i].temp < app.$data.criticalValue.temp[0] || app.$data.warehouseData[i].temp > app.$data.criticalValue.temp[1]) {
+                        app.$data.warehouseData[i].alertState.temp = true;
+                    } else {
+                        app.$data.warehouseData[i].alertState.temp = false;
+                    }
+                    if (app.$data.warehouseData[i].hum < app.$data.criticalValue.hum[0] || app.$data.warehouseData[i].hum > app.$data.criticalValue.hum[1]) {
+                        app.$data.warehouseData[i].alertState.hum = true;
+                    } else {
+                        app.$data.warehouseData[i].alertState.hum = false;
+                    }
+                    if (app.$data.warehouseData[i].hum < app.$data.criticalValue.mq135[0] || app.$data.warehouseData[i].mq135 > app.$data.criticalValue.mq135[1]) {
+                        app.$data.warehouseData[i].alertState.mq135 = true;
+                    } else {
+                        app.$data.warehouseData[i].alertState.mq135 = false;
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
